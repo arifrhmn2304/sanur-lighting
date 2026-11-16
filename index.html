@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="id" class="dark h-full overflow-hidden">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <title>Sanur Lighting Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#020617">
+  <link rel="icon" type="image/png" sizes="192x192" href="/sanurlighting.png">
+  <link rel="apple-touch-icon" href="/sanurlighting.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation; /* Mencegah double-tap zoom di Safari */
+    }
+    
+    html, body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      -webkit-tap-highlight-color: transparent;
+      background: #020617; 
+      color: #f8fafc;
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      overflow: hidden !important;
+      position: fixed; /* Mengunci canvas Safari iOS agar tidak membal / geser samping */
+    }
+
+    .font-mono-receipt {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* MENCEGAH AUTO-ZOOM SAFARI: Font size minimal 16px untuk input di iOS */
+    input, select, textarea {
+      font-size: 16px !important; 
+    }
+
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+
+    /* --- Dark Mode UI Design System --- */
+    .glass-card-dark {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .btn-glow-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 14px 0 rgba(29, 78, 216, 0.4);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-glow-primary:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 6px 0 rgba(29, 78, 216, 0.3);
+    }
+
+    .btn-glow-emerald {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.35);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-glow-emerald:active {
+      transform: scale(0.96);
+    }
+
+    .btn-glow-amber {
+      background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+      box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.35);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-glow-amber:active {
+      transform: scale(0.96);
+    }
+
+    .tab-active-dark {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid rgba(100, 116, 139, 0.4);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+    /* Mencegah input date meluap/keluar dari container di iOS Safari */
+    input[type="date"] {
+      -webkit-appearance: none;
+      min-height: 2.5rem;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* --- Keyframe Animations --- */
+    @keyframes popCard {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+    .card-pop {
+      animation: popCard 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-page {
+      animation: pageIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Dark Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full w-full flex flex-col justify-between overflow-hidden">
+
+  <!-- Main Container Mobile App Frame (Strict Width Lock) -->
+  <div class="w-full max-w-md mx-auto h-full flex flex-col bg-slate-900 shadow-2xl relative overflow-hidden border-x border-slate-800/80">
+
+    <!-- Header Mobile App Dark Ambient -->
+    <header class="bg-slate-950/80 backdrop-blur-md text-white px-4 py-3.5 flex-shrink-0 flex justify-between items-center z-20 border-b border-slate-800/80">
+      <div class="flex items-center gap-2.5">
+        <div>
+          <h1 class="text-xs font-black tracking-wider text-slate-100 uppercase">SANUR LIGHTING</h1>
+          <p class="text-[9.5px] text-slate-400 font-semibold tracking-tight">Keuangan Lampu</p>
+        </div>
+      </div>
+      <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9.5px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online
+      </span>
+    </header>
+
+    <!-- Navigasi Tab Segmented Style Dark -->
+    <div class="px-3 pt-3 flex-shrink-0 w-full z-10">
+      <nav class="bg-slate-950/60 p-1 rounded-2xl flex text-xs font-black text-center border border-slate-800 backdrop-blur-md">
+        <button id="tabNavInput" class="flex-1 py-2.5 rounded-xl transition-all duration-200 tab-active-dark flex items-center justify-center gap-1">
+          <span>📝</span> Input
+        </button>
+        <button id="tabNavRiwayat" class="flex-1 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-1">
+          <span>📋</span> Riwayat
+        </button>
+        <button id="tabNavBarang" class="flex-1 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-1">
+          <span>🔒</span> Barang
+        </button>
+      </nav>
+    </div>
+
+    <!-- ================= HALAMAN 1: INPUT DATA ================= -->
+    <div id="pageInput" class="flex-1 flex flex-col min-h-0 w-full animate-page overflow-x-hidden">
+      <div class="flex-1 overflow-y-auto p-3 space-y-3 pb-4 overflow-x-hidden">
+        
+       <!-- Card Input Informasi Tempat & Tanggal -->
+        <div class="glass-card-dark p-3.5 rounded-2xl space-y-2.5 w-full box-border overflow-hidden">
+          <div class="w-full">
+            <label class="block text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">📍 Lokasi / Alamat Acara</label>
+            <input type="text" id="inputAlamat" placeholder="Contoh: Berok Rakik / Gedung DPD" 
+                   class="w-full max-w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition font-bold text-slate-100 placeholder:text-slate-500 box-border block">
+          </div>
+          <div class="w-full">
+            <label class="block text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">📅 Tanggal Transaksi</label>
+            <input type="date" id="inputTanggal" 
+                   class="w-full max-w-full px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 transition font-bold text-slate-100 box-border block appearance-none text-xs">
+          </div>
+        </div>
+
+        <!-- Header Pilih Barang -->
+        <div class="flex justify-between items-center px-1 pt-0.5">
+          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daftar Lampu Available</span>
+          <span class="text-[10px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full" id="itemSelectedCount">0 barang dipilih</span>
+        </div>
+
+        <div class="space-y-2 overflow-x-hidden" id="itemList"></div>
+      </div>
+
+      <!-- Bottom Bar Summary Calculation Panel Dark -->
+      <div class="p-3 bg-slate-950/80 backdrop-blur-md flex-shrink-0 z-10 border-t border-slate-800">
+        <div class="glass-card-dark p-3.5 rounded-2xl space-y-2.5 shadow-2xl">
+          
+          <div class="grid grid-cols-3 gap-1.5 text-center bg-slate-800/60 p-2 rounded-xl border border-slate-700/50 text-[10.5px]">
+            <div>
+              <span class="text-slate-400 block text-[8.5px] font-black uppercase tracking-wider">Sewa Lampu</span>
+              <span class="font-black text-slate-200" id="resTotalLampu">Rp 0</span>
+            </div>
+            <div class="border-x border-slate-700/60">
+              <span class="text-slate-400 block text-[8.5px] font-black uppercase tracking-wider">Pasang (60%)</span>
+              <span class="font-black text-slate-200" id="resPasang">Rp 0</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[8.5px] font-black uppercase tracking-wider">Bongkar (40%)</span>
+              <span class="font-black text-slate-200" id="resBongkar">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-0.5">
+            <div>
+              <span class="text-[8.5px] text-slate-400 uppercase font-black tracking-wider block">Grand Total</span>
+              <span class="text-base font-black text-amber-400 transition-all duration-200 inline-block" id="resGrandTotal">Rp 0</span>
+            </div>
+            <div class="flex gap-1.5 flex-1 justify-end">
+              <button id="btnBatalEdit" class="hidden bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 font-extrabold py-2.5 px-3 rounded-xl text-xs text-center transition active:scale-95">
+                ❌ Batal
+              </button>
+              <button id="btnSimpan" class="btn-glow-primary text-white font-extrabold py-2.5 px-4 rounded-xl text-xs text-center flex-1">
+                💾 Simpan Transaksi
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= HALAMAN 2: RIWAYAT DATA & SEARCH ================= -->
+    <div id="pageRiwayat" class="flex-1 flex flex-col min-h-0 w-full p-3 hidden overflow-x-hidden">
+      <div class="glass-card-dark p-3 rounded-2xl mb-3 flex-shrink-0">
+        <input type="text" id="searchAlamat" placeholder="🔍 Cari alamat / nama lokasi..." 
+               class="w-full px-3 py-2.5 bg-slate-800/90 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-100 placeholder:text-slate-500">
+      </div>
+
+      <div class="flex justify-between items-center mb-2 px-1 flex-shrink-0">
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Riwayat Rekapitulasi</span>
+        <button id="btnRefreshRiwayat" class="text-[10px] font-extrabold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded-lg transition active:scale-95">🔄 Refresh</button>
+      </div>
+
+      <div id="riwayatList" class="flex-1 overflow-y-auto space-y-2 pr-0.5 overflow-x-hidden"></div>
+    </div>
+
+    <!-- ================= HALAMAN 3: MASTER BARANG DINAMIS ================= -->
+    <div id="pageBarang" class="flex-1 flex flex-col min-h-0 w-full p-3 hidden overflow-x-hidden">
+      <div class="glass-card-dark p-3.5 rounded-2xl space-y-2.5 mb-3 flex-shrink-0">
+        <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider block">Tambah Lampu Baru</span>
+        <div class="flex gap-2">
+          <input type="text" id="newNamaBarang" placeholder="Nama Lampu Baru" 
+                 class="flex-1 px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-100 placeholder:text-slate-500">
+          <input type="number" id="newHargaBarang" placeholder="Harga" 
+                 class="w-24 px-3 py-2 bg-slate-800/90 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-100 placeholder:text-slate-500">
+        </div>
+        <button id="btnTambahBarang" class="w-full btn-glow-primary text-white font-extrabold py-2.5 rounded-xl text-xs">
+          + Tambah Barang Ke Master
+        </button>
+      </div>
+
+      <div class="flex justify-between items-center mb-2 px-1 flex-shrink-0">
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daftar Master & Harga</span>
+        <button id="btnSimpanMasterCloud" class="btn-glow-emerald text-white font-extrabold px-3 py-1.5 rounded-xl text-[11px]">
+          💾 Simpan Ke Cloud
+        </button>
+      </div>
+
+      <div id="masterBarangList" class="flex-1 overflow-y-auto space-y-2 pr-0.5 overflow-x-hidden"></div>
+    </div>
+
+    <!-- MODAL POP-UP PIN / PASSWORD DARK -->
+    <div id="modalPin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[70] hidden flex items-center justify-center p-4">
+      <div class="w-full max-w-xs bg-slate-900 rounded-3xl p-5 shadow-2xl space-y-4 border border-slate-700 text-center">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto mb-2 text-xl shadow-lg">
+            🔐
+          </div>
+          <h3 class="text-sm font-black text-slate-100">Akses Khusus Pemilik</h3>
+          <p class="text-[10.5px] text-slate-400 font-bold mt-0.5">Masukkan PIN untuk mengelola master barang</p>
+        </div>
+
+        <div>
+          <input type="password" id="inputPinOwner" placeholder="••••" maxlength="6" 
+                 class="w-full text-center tracking-widest text-xl font-black py-2.5 px-3 bg-slate-800 border border-slate-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-100">
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btnBatalPin" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold py-2.5 rounded-xl text-xs transition active:scale-95">
+            Batal
+          </button>
+          <button id="btnSubmitPin" class="flex-1 btn-glow-primary text-white font-extrabold py-2.5 rounded-xl text-xs">
+            Masuk
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL POP-UP RINCIAN DARK -->
+    <div id="modalRincian" class="fixed inset-0 bg-slate-950/0 backdrop-blur-none z-50 pointer-events-none transition-all duration-300 flex items-end justify-center p-0">
+      <div id="modalCard" class="bg-slate-900 w-full max-w-md rounded-t-3xl p-4 space-y-3.5 max-h-[90vh] flex flex-col shadow-2xl border-t border-slate-700 transform translate-y-full transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+        
+        <div class="flex justify-between items-start border-b border-slate-800 pb-2.5 flex-shrink-0">
+          <div>
+            <h2 class="text-sm font-black text-slate-100" id="modalAlamat">-</h2>
+            <p class="text-[10.5px] font-bold text-slate-400" id="modalTanggal">-</p>
+          </div>
+          <button id="btnCloseModal" class="bg-slate-800 text-slate-400 hover:text-slate-100 w-7 h-7 rounded-full font-black text-sm flex items-center justify-center transition active:scale-90">&times;</button>
+        </div>
+
+        <div class="space-y-1.5 text-xs overflow-y-auto max-h-[40vh] pr-1 border-b border-slate-800 pb-2.5 divide-y divide-slate-800/80" id="modalItems"></div>
+
+        <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs space-y-1.5 flex-shrink-0">
+          <div class="flex justify-between text-slate-300 font-medium">
+            <span>Sewa Lampu</span>
+            <span id="modalTotalLampu" class="font-bold text-slate-100">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-slate-400 font-medium text-[11px]">
+            <span>Pasang (60%)</span>
+            <span id="modalPasang">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-slate-400 font-medium text-[11px]">
+            <span>Bongkar (40%)</span>
+            <span id="modalBongkar">Rp 0</span>
+          </div>
+          <div class="flex justify-between items-center font-black text-slate-100 text-sm border-t pt-2 mt-1 border-slate-800">
+            <span>GRAND TOTAL</span>
+            <span id="modalGrandTotal" class="text-emerald-400">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 flex-shrink-0">
+          <button id="btnEditTransaksi" class="btn-glow-amber text-white font-extrabold py-2.5 px-3 rounded-xl text-xs text-center">
+            ✏️ Edit Input Data Ini
+          </button>
+        </div>
+
+        <button id="btnBukaStrukSS" class="w-full btn-glow-emerald text-white font-extrabold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 flex-shrink-0">
+          📱 Tampilkan Struk (Siap Screenshot WA)
+        </button>
+
+      </div>
+    </div>
+
+    <!-- MODAL STRUK DIGITAL KASIR ADAPTIF (DARK THEME UNTUK SCREENSHOT WA) -->
+    <div id="modalStrukSS" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[60] hidden flex items-center justify-center p-2.5 overflow-hidden">
+      <div id="ssCardContainer" class="w-full max-w-[340px] bg-slate-900 rounded-3xl p-3.5 shadow-2xl space-y-3 border border-slate-800 my-auto">
+        
+        <!-- Area Struk Nota (Bagian Utama yang Di-Screenshot) -->
+        <div id="strukCardArea" class="bg-slate-950 p-4 rounded-2xl border border-slate-800 font-mono-receipt text-xs space-y-2.5 shadow-inner">
+          
+          <!-- Header Struk -->
+          <div class="text-center border-b border-dashed border-slate-700 pb-2">
+            <h1 class="font-black text-xs text-slate-100 tracking-wider">SANUR LIGHTING</h1>
+            <p class="text-[8px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">Nota Keuangan Lampu</p>
+            <div class="flex justify-between text-[9px] text-slate-400 font-bold mt-2 px-0.5 border-t border-slate-800/80 pt-1.5">
+              <p class="truncate max-w-[180px]">LOKASI: <span id="ssAlamat" class="uppercase text-slate-200">-</span></p>
+              <p>TGL: <span id="ssTanggal" class="text-slate-200">-</span></p>
+            </div>
+          </div>
+
+          <!-- Daftar Item Lampu -->
+          <div id="ssItemList" class="border-b border-dashed border-slate-700 pb-2"></div>
+
+          <!-- Ringkasan Pembayaran -->
+          <div class="space-y-1 text-[10px] pt-0.5">
+            <div class="flex justify-between text-slate-300 font-semibold">
+              <span>Sewa Lampu:</span>
+              <span id="ssTotalLampu" class="font-extrabold text-slate-100">Rp 0</span>
+            </div>
+            <div class="flex justify-between text-slate-400 text-[9px]">
+              <span>Pasang (60%): <span id="ssPasang" class="text-slate-300">Rp 0</span></span>
+              <span>Bongkar (40%): <span id="ssBongkar" class="text-slate-300">Rp 0</span></span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] font-black border-t border-slate-700 pt-1.5 mt-1">
+              <span class="text-slate-300">TOTAL PEMBAYARAN:</span>
+              <span id="ssGrandTotal" class="text-amber-400 font-extrabold text-xs">Rp 0</span>
+            </div>
+          </div>
+
+          <!-- Footer Struk -->
+          <div class="text-center text-[8.5px] text-slate-500 pt-1 border-t border-dashed border-slate-800">
+            *** Terima Kasih - Sanur Collection ***
+          </div>
+        </div>
+
+        <!-- Tombol Aksi -->
+        <div>
+          <button id="btnCloseStrukSS" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-extrabold py-2.5 rounded-xl text-xs text-center active:scale-95 transition shadow-md">
+            Tutup Nota
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Firebase Script & Logic App -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCyWa5otNIbUjJpdZHO01hkjtDZ6DBYPYo",
+      authDomain: "rekap-lampu-sanur.firebaseapp.com",
+      projectId: "rekap-lampu-sanur",
+      storageBucket: "rekap-lampu-sanur.firebasestorage.app",
+      messagingSenderId: "377448962254",
+      appId: "1:377448962254:web:9ee564c50497e6e98e589f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const OWNER_PIN = "23";
+    let isOwnerAuthenticated = false;
+
+    const defaultBarang = [
+      { no: 1, nama: "LAMPU PENERANGAN", harga: 9000 },
+      { no: 2, nama: "LAMPU KRISTAL", harga: 15000 },
+      { no: 3, nama: "LAMPU BURUNG", harga: 9000 },
+      { no: 4, nama: "LAMPU SOROT PUTIH/GOLD", harga: 9000 },
+      { no: 5, nama: "LAMPU SOROT KECIL", harga: 5000 },
+      { no: 6, nama: "LAMPU BUNGA BESAR/KECIL", harga: 9000 },
+      { no: 7, nama: "LAMPU TULIP", harga: 9000 },
+      { no: 8, nama: "PANEL LISTRIK", harga: 15000 },
+      { no: 9, nama: "PARLED", harga: 9000 },
+      { no: 10, nama: "LAMPU KUPU KUPU", harga: 15000 },
+      { no: 11, nama: "LAMPU APEL", harga: 9000 },
+      { no: 12, nama: "LAMPU KLENTONG", harga: 9000 },
+      { no: 13, nama: "LAMPU PAGAR", harga: 15000 },
+      { no: 14, nama: "LAMPU KELAP KELIP", harga: 15000 },
+      { no: 15, nama: "LAMPU RAMADHAN", harga: 15000 },
+      { no: 16, nama: "LAMPU LAMPION", harga: 45000 },
+      { no: 17, nama: "LAMPU AKRILIK", harga: 45000 },
+    ];
+
+    let barangData = defaultBarang.map(item => ({ ...item, qty: 0 }));
+    let rawRiwayatData = [];
+    let currentSelectedData = null;
+    let editingDocId = null;
+
+    // SINKRONISASI MASTER BARANG SECARA REALTIME DARI FIREBASE DAFTAR BARANG
+    const masterDocRef = doc(db, "settings", "master_barang");
+    onSnapshot(masterDocRef, (docSnap) => {
+      if (docSnap.exists() && docSnap.data().items) {
+        const cloudItems = docSnap.data().items;
+        barangData = cloudItems.map(item => {
+          const old = barangData.find(b => b.nama === item.nama);
+          return { ...item, qty: old ? old.qty : 0 };
+        });
+      } else {
+        setDoc(masterDocRef, { items: defaultBarang });
+      }
+      renderItems();
+      if (!pageBarang.classList.contains('hidden')) {
+        renderMasterBarang();
+      }
+    });
+
+    // SIMPAN PERUBAHAN MASTER BARANG KE FIREBASE CLOUD
+    async function saveBarangMasterCloud() {
+      const dataToSave = barangData.map(({ no, nama, harga }) => ({
+        no: no || 1,
+        nama: nama || "BARANG BARU",
+        harga: Number(harga) || 0
+      }));
+
+      try {
+        await setDoc(masterDocRef, { items: dataToSave });
+        alert("✅ Master barang berhasil diperbarui ke seluruh HP!");
+      } catch (err) {
+        console.error("Firebase Error:", err);
+        alert("Gagal menyimpan: " + err.message);
+      }
+    }
+
+    document.getElementById('btnSimpanMasterCloud').addEventListener('click', saveBarangMasterCloud);
+
+    const tabNavInput = document.getElementById('tabNavInput');
+    const tabNavRiwayat = document.getElementById('tabNavRiwayat');
+    const tabNavBarang = document.getElementById('tabNavBarang');
+
+    const pageInput = document.getElementById('pageInput');
+    const pageRiwayat = document.getElementById('pageRiwayat');
+    const pageBarang = document.getElementById('pageBarang');
+
+    function resetTabs() {
+      pageInput.classList.add('hidden');
+      pageRiwayat.classList.add('hidden');
+      pageBarang.classList.add('hidden');
+
+      pageInput.classList.remove('animate-page');
+      pageRiwayat.classList.remove('animate-page');
+      pageBarang.classList.remove('animate-page');
+
+      tabNavInput.className = "flex-1 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-1";
+      tabNavRiwayat.className = "flex-1 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-1";
+      tabNavBarang.className = "flex-1 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all duration-200 flex items-center justify-center gap-1";
+    }
+
+    tabNavInput.addEventListener('click', () => {
+      resetTabs();
+      pageInput.classList.remove('hidden');
+      pageInput.classList.add('animate-page');
+      tabNavInput.className = "flex-1 py-2.5 rounded-xl transition-all duration-200 tab-active-dark flex items-center justify-center gap-1";
+      renderItems();
+    });
+
+    tabNavRiwayat.addEventListener('click', () => {
+      resetTabs();
+      pageRiwayat.classList.remove('hidden');
+      pageRiwayat.classList.add('animate-page');
+      tabNavRiwayat.className = "flex-1 py-2.5 rounded-xl transition-all duration-200 tab-active-dark flex items-center justify-center gap-1";
+      loadRiwayatData();
+    });
+
+    tabNavBarang.addEventListener('click', () => {
+      if (isOwnerAuthenticated) {
+        bukaHalamanBarang();
+      } else {
+        document.getElementById('inputPinOwner').value = '';
+        document.getElementById('modalPin').classList.remove('hidden');
+      }
+    });
+
+    function bukaHalamanBarang() {
+      resetTabs();
+      pageBarang.classList.remove('hidden');
+      pageBarang.classList.add('animate-page');
+      tabNavBarang.className = "flex-1 py-2.5 rounded-xl transition-all duration-200 tab-active-dark flex items-center justify-center gap-1";
+      renderMasterBarang();
+    }
+
+    document.getElementById('btnSubmitPin').addEventListener('click', () => {
+      const pinEntered = document.getElementById('inputPinOwner').value.trim();
+      if (pinEntered === OWNER_PIN) {
+        isOwnerAuthenticated = true;
+        document.getElementById('modalPin').classList.add('hidden');
+        bukaHalamanBarang();
+      } else {
+        alert("PIN Salah! Akses ditolak.");
+        document.getElementById('inputPinOwner').value = '';
+      }
+    });
+
+    document.getElementById('btnBatalPin').addEventListener('click', () => {
+      document.getElementById('modalPin').classList.add('hidden');
+    });
+
+    function formatRupiah(num) {
+      return 'Rp ' + (num || 0).toLocaleString('id-ID');
+    }
+
+    function formatRupiahShort(num) {
+      return (num || 0).toLocaleString('id-ID');
+    }
+
+    const itemListContainer = document.getElementById('itemList');
+
+    function renderItems() {
+      itemListContainer.innerHTML = '';
+      barangData.forEach((item, index) => {
+        const hasQty = item.qty > 0;
+        const div = document.createElement('div');
+        div.id = `item-card-${index}`;
+        div.className = `glass-card-dark p-3 rounded-2xl transition-all duration-300 flex items-center justify-between gap-1.5 w-full box-border border ${
+          hasQty ? 'border-amber-500/80 bg-amber-500/10 shadow-lg ring-1 ring-amber-500/50' : 'border-slate-800'
+        }`;
+        
+        div.innerHTML = `
+          <div class="flex-1 min-w-0 pr-1">
+            <h3 class="text-xs font-black text-slate-100 truncate">${item.nama}</h3>
+            <span class="text-[10px] font-bold text-slate-400 block">${formatRupiah(item.harga)}</span>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button class="btn-minus w-8 h-8 bg-slate-800 active:bg-slate-700 text-slate-200 font-black rounded-xl text-sm flex items-center justify-center border border-slate-700" data-index="${index}">-</button>
+            <input type="number" min="0" value="${item.qty || ''}" placeholder="0" data-index="${index}" 
+                   class="qty-input w-10 text-center py-1 bg-slate-900 border border-slate-700 rounded-xl text-xs font-black text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <button class="btn-plus w-8 h-8 bg-blue-600 active:bg-blue-700 text-white font-black rounded-xl text-sm flex items-center justify-center shadow-md" data-index="${index}">+</button>
+          </div>
+        `;
+        itemListContainer.appendChild(div);
+      });
+
+      function updateSingleItemCard(index) {
+        const item = barangData[index];
+        const card = document.getElementById(`item-card-${index}`);
+        if (!card) return;
+
+        const input = card.querySelector('.qty-input');
+        if (input) input.value = item.qty || '';
+
+        if (item.qty > 0) {
+          card.className = "glass-card-dark p-3 rounded-2xl transition-all duration-300 flex items-center justify-between gap-1.5 w-full box-border border border-amber-500/80 bg-amber-500/10 shadow-lg ring-1 ring-amber-500/50";
+        } else {
+          card.className = "glass-card-dark p-3 rounded-2xl transition-all duration-300 flex items-center justify-between gap-1.5 w-full box-border border border-slate-800";
+        }
+
+        card.classList.remove('card-pop');
+        void card.offsetWidth;
+        card.classList.add('card-pop');
+
+        hitungTotal();
+      }
+
+      document.querySelectorAll('.btn-minus').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          if (barangData[idx].qty > 0) {
+            barangData[idx].qty--;
+            updateSingleItemCard(idx);
+          }
+        });
+      });
+
+      document.querySelectorAll('.btn-plus').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          barangData[idx].qty = (barangData[idx].qty || 0) + 1;
+          updateSingleItemCard(idx);
+        });
+      });
+
+      document.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          const val = parseInt(e.target.value) || 0;
+          barangData[idx].qty = val;
+          updateSingleItemCard(idx);
+        });
+      });
+
+      hitungTotal();
+    }
+
+    function hitungTotal() {
+      const grandTotal = barangData.reduce((acc, curr) => acc + (curr.harga * (curr.qty || 0)), 0);
+      const pasang = Math.round(grandTotal * 0.6);
+      const bongkar = Math.round(grandTotal * 0.4);
+      const selectedCount = barangData.filter(i => (i.qty || 0) > 0).length;
+
+      document.getElementById('itemSelectedCount').innerText = `${selectedCount} barang dipilih`;
+      document.getElementById('resTotalLampu').innerText = formatRupiah(grandTotal);
+      document.getElementById('resPasang').innerText = formatRupiah(pasang);
+      document.getElementById('resBongkar').innerText = formatRupiah(bongkar);
+      
+      const grandTotalEl = document.getElementById('resGrandTotal');
+      if (grandTotalEl.innerText !== formatRupiah(grandTotal)) {
+        grandTotalEl.innerText = formatRupiah(grandTotal);
+        grandTotalEl.classList.add('scale-110', 'text-amber-300');
+        setTimeout(() => {
+          grandTotalEl.classList.remove('scale-110', 'text-amber-300');
+        }, 200);
+      }
+
+      return { grandTotal, pasang, bongkar };
+    }
+
+    document.getElementById('inputTanggal').valueAsDate = new Date();
+
+    function batalEditMode() {
+      editingDocId = null;
+      document.getElementById('inputAlamat').value = '';
+      document.getElementById('inputTanggal').valueAsDate = new Date();
+      document.getElementById('btnSimpan').innerText = "💾 Simpan Transaksi";
+      document.getElementById('btnBatalEdit').classList.add('hidden');
+      
+      barangData.forEach(i => i.qty = 0);
+      renderItems();
+    }
+
+    document.getElementById('btnBatalEdit').addEventListener('click', batalEditMode);
+
+    document.getElementById('btnSimpan').addEventListener('click', async () => {
+      const alamat = document.getElementById('inputAlamat').value.trim();
+      const tanggal = document.getElementById('inputTanggal').value;
+      const { grandTotal, pasang, bongkar } = hitungTotal();
+
+      if (!alamat) { alert("Alamat/Tempat harus diisi!"); return; }
+
+      const itemsDipilih = barangData.filter(i => (i.qty || 0) > 0).map(i => ({
+        nama_barang: i.nama,
+        harga_satuan: i.harga,
+        jumlah: i.qty,
+        total: i.harga * i.qty
+      }));
+
+      if (itemsDipilih.length === 0) { alert("Pilih minimal 1 jumlah barang!"); return; }
+
+      try {
+        if (editingDocId) {
+          await updateDoc(doc(db, "rekap_transaksi", editingDocId), {
+            alamat, tanggal, items: itemsDipilih,
+            grand_total: grandTotal, biaya_pasang: pasang, biaya_bongkar: bongkar
+          });
+          alert("Transaksi berhasil diperbarui!");
+        } else {
+          await addDoc(collection(db, "rekap_transaksi"), {
+            alamat, tanggal, items: itemsDipilih,
+            grand_total: grandTotal, biaya_pasang: pasang, biaya_bongkar: bongkar,
+            created_at: serverTimestamp()
+          });
+          alert("Berhasil! Data tersimpan di Firebase.");
+        }
+        
+        batalEditMode();
+
+      } catch (err) {
+        console.error(err);
+        alert("Gagal menyimpan data!");
+      }
+    });
+
+    async function loadRiwayatData() {
+      const container = document.getElementById('riwayatList');
+      container.innerHTML = `
+        <div class="space-y-2.5 animate-pulse">
+          <div class="h-16 bg-slate-800 rounded-2xl"></div>
+          <div class="h-16 bg-slate-800 rounded-2xl"></div>
+          <div class="h-16 bg-slate-800 rounded-2xl"></div>
+        </div>
+      `;
+
+      try {
+        const q = query(collection(db, "rekap_transaksi"), orderBy("created_at", "desc"));
+        const querySnapshot = await getDocs(q);
+
+        rawRiwayatData = [];
+        querySnapshot.forEach((docSnap) => {
+          rawRiwayatData.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        applyFilterRiwayat();
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div class="text-center py-8 text-red-400 text-xs font-medium">Gagal memuat riwayat.</div>';
+      }
+    }
+
+    function applyFilterRiwayat() {
+      const container = document.getElementById('riwayatList');
+      const keyword = document.getElementById('searchAlamat').value.toLowerCase().trim();
+
+      let filtered = rawRiwayatData.filter(item => {
+        return (item.alamat || '').toLowerCase().includes(keyword);
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs font-bold">Tidak ada data transaksi yang cocok.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach((data) => {
+        const div = document.createElement('div');
+        div.className = "glass-card-dark p-3.5 rounded-2xl active:scale-[0.98] transition-all flex items-center justify-between cursor-pointer border border-slate-800 hover:border-slate-700";
+        div.innerHTML = `
+          <div>
+            <h3 class="text-xs font-black text-slate-100 mb-0.5">${data.alamat || '-'}</h3>
+            <p class="text-[10px] font-bold text-slate-400">${data.tanggal || '-'}</p>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-black text-amber-400 block">${formatRupiah(data.grand_total)}</span>
+            <span class="text-[9px] font-black text-slate-400 block">Rincian &rsaquo;</span>
+          </div>
+        `;
+        div.addEventListener('click', () => bukaModalRincian(data));
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById('searchAlamat').addEventListener('input', applyFilterRiwayat);
+    document.getElementById('btnRefreshRiwayat').addEventListener('click', loadRiwayatData);
+
+    function bukaModalRincian(data) {
+      currentSelectedData = data;
+      document.getElementById('modalAlamat').innerText = data.alamat;
+      document.getElementById('modalTanggal').innerText = `Tanggal: ${data.tanggal}`;
+      
+      const modalItems = document.getElementById('modalItems');
+      modalItems.innerHTML = '';
+      
+      data.items.forEach(i => {
+        const row = document.createElement('div');
+        row.className = "flex justify-between py-1.5 border-b border-slate-800/80";
+        row.innerHTML = `
+          <span class="text-slate-300 font-semibold">${i.nama_barang} (${i.jumlah}x)</span>
+          <span class="font-extrabold text-slate-100">${formatRupiah(i.total)}</span>
+        `;
+        modalItems.appendChild(row);
+      });
+
+      document.getElementById('modalTotalLampu').innerText = formatRupiah(data.grand_total);
+      document.getElementById('modalPasang').innerText = formatRupiah(data.biaya_pasang);
+      document.getElementById('modalBongkar').innerText = formatRupiah(data.biaya_bongkar);
+      document.getElementById('modalGrandTotal').innerText = formatRupiah(data.grand_total);
+
+      const modal = document.getElementById('modalRincian');
+      const modalCard = document.getElementById('modalCard');
+
+      modal.classList.remove('hidden', 'pointer-events-none', 'bg-slate-950/0', 'backdrop-blur-none');
+      modal.classList.add('bg-slate-950/70', 'backdrop-blur-md');
+      
+      setTimeout(() => {
+        modalCard.classList.remove('translate-y-full');
+        modalCard.classList.add('translate-y-0');
+      }, 10);
+    }
+
+    function tutupModalRincian() {
+      const modal = document.getElementById('modalRincian');
+      const modalCard = document.getElementById('modalCard');
+
+      modalCard.classList.remove('translate-y-0');
+      modalCard.classList.add('translate-y-full');
+
+      modal.classList.remove('bg-slate-950/70', 'backdrop-blur-md');
+      modal.classList.add('bg-slate-950/0', 'backdrop-blur-none');
+
+      setTimeout(() => {
+        modal.classList.add('hidden', 'pointer-events-none');
+      }, 300);
+    }
+
+    document.getElementById('btnCloseModal').addEventListener('click', tutupModalRincian);
+    
+    document.getElementById('modalRincian').addEventListener('click', (e) => {
+      if (e.target.id === 'modalRincian') tutupModalRincian();
+    });
+
+    document.getElementById('btnEditTransaksi').addEventListener('click', () => {
+      if (!currentSelectedData) return;
+      editingDocId = currentSelectedData.id;
+
+      document.getElementById('inputAlamat').value = currentSelectedData.alamat;
+      document.getElementById('inputTanggal').value = currentSelectedData.tanggal;
+
+      barangData.forEach(b => {
+        const found = currentSelectedData.items.find(i => i.nama_barang === b.nama);
+        b.qty = found ? found.jumlah : 0;
+      });
+
+      tutupModalRincian();
+      tabNavInput.click();
+      
+      document.getElementById('btnSimpan').innerText = "✏️ Update Data";
+      document.getElementById('btnBatalEdit').classList.remove('hidden');
+    });
+
+    document.getElementById('btnBukaStrukSS').addEventListener('click', () => {
+      if (!currentSelectedData) return;
+      const data = currentSelectedData;
+
+      document.getElementById('ssAlamat').innerText = data.alamat;
+      document.getElementById('ssTanggal').innerText = data.tanggal;
+
+      const ssItemList = document.getElementById('ssItemList');
+      const cardContainer = document.getElementById('ssCardContainer');
+      ssItemList.innerHTML = '';
+
+      const totalItemCount = data.items.length;
+
+      if (totalItemCount <= 10) {
+        cardContainer.className = "w-full max-w-[340px] bg-slate-900 rounded-3xl p-3.5 shadow-2xl space-y-3 border border-slate-800 my-auto text-slate-100";
+        ssItemList.className = "space-y-1.5 border-b border-dashed border-slate-700 pb-2 text-[10.5px]";
+
+        data.items.forEach(i => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center py-1 border-b border-slate-800/60";
+          div.innerHTML = `
+            <div class="truncate flex-1 pr-2">
+              <span class="font-extrabold text-slate-100 block tracking-tight">${i.nama_barang}</span>
+              <span class="block text-[9px] text-slate-400 font-bold">${i.jumlah} x ${formatRupiahShort(i.harga_satuan)}</span>
+            </div>
+            <span class="font-black text-amber-400 flex-shrink-0 text-xs">${formatRupiah(i.total)}</span>
+          `;
+          ssItemList.appendChild(div);
+        });
+      } else {
+        cardContainer.className = "w-full max-w-[380px] bg-slate-900 rounded-3xl p-3 shadow-2xl space-y-2.5 border border-slate-800 my-auto text-slate-100";
+        ssItemList.className = "grid grid-cols-2 gap-x-2.5 gap-y-1 border-b border-dashed border-slate-700 pb-2 text-[9px]";
+
+        data.items.forEach(i => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center py-0.5 border-b border-slate-800/80";
+          div.innerHTML = `
+            <span class="font-extrabold text-slate-100 truncate pr-1 max-w-[110px] tracking-tight">${i.nama_barang}</span>
+            <span class="font-black text-amber-400 flex-shrink-0">${i.jumlah}x ${formatRupiahShort(i.total)}</span>
+          `;
+          ssItemList.appendChild(div);
+        });
+      }
+
+      document.getElementById('ssTotalLampu').innerText = formatRupiah(data.grand_total);
+      document.getElementById('ssPasang').innerText = formatRupiah(data.biaya_pasang);
+      document.getElementById('ssBongkar').innerText = formatRupiah(data.biaya_bongkar);
+      document.getElementById('ssGrandTotal').innerText = formatRupiah(data.grand_total);
+
+      document.getElementById('modalStrukSS').classList.remove('hidden');
+    });
+
+    document.getElementById('btnCloseStrukSS').addEventListener('click', () => {
+      document.getElementById('modalStrukSS').classList.add('hidden');
+    });
+
+    function renderMasterBarang() {
+      const container = document.getElementById('masterBarangList');
+      container.innerHTML = '';
+
+      barangData.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = "glass-card-dark p-3 rounded-2xl flex items-center justify-between gap-2 border border-slate-800";
+        div.innerHTML = `
+          <div class="flex-1 min-w-0">
+            <input type="text" value="${item.nama}" data-index="${index}" class="edit-nama-barang font-black text-xs text-slate-100 bg-transparent w-full focus:bg-slate-800/80 focus:outline-none rounded px-1">
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-400">Rp</span>
+            <input type="number" value="${item.harga}" data-index="${index}" class="edit-harga-barang w-20 text-xs font-black text-amber-400 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1 text-right">
+            <button class="btn-hapus-master text-red-400 hover:text-red-300 font-black px-2 py-1 text-base transition active:scale-90" data-index="${index}">&times;</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      document.querySelectorAll('.edit-nama-barang').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          barangData[idx].nama = e.target.value.trim();
+        });
+      });
+
+      document.querySelectorAll('.edit-harga-barang').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          barangData[idx].harga = parseInt(e.target.value) || 0;
+        });
+      });
+
+      document.querySelectorAll('.btn-hapus-master').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = e.target.getAttribute('data-index');
+          if (confirm(`Hapus "${barangData[idx].nama}" dari daftar barang?`)) {
+            barangData.splice(idx, 1);
+            renderMasterBarang();
+          }
+        });
+      });
+    }
+
+    document.getElementById('btnTambahBarang').addEventListener('click', async () => {
+      const nama = document.getElementById('newNamaBarang').value.trim().toUpperCase();
+      const harga = parseInt(document.getElementById('newHargaBarang').value) || 0;
+
+      if (!nama || harga <= 0) {
+        alert("Nama barang dan harga harus diisi!");
+        return;
+      }
+
+      barangData.push({ no: barangData.length + 1, nama, harga, qty: 0 });
+
+      const dataToSave = barangData.map(({ no, nama, harga }) => ({
+        no: no || 1,
+        nama: nama || "BARANG BARU",
+        harga: Number(harga) || 0
+      }));
+
+      try {
+        await setDoc(masterDocRef, { items: dataToSave });
+        
+        document.getElementById('newNamaBarang').value = '';
+        document.getElementById('newHargaBarang').value = '';
+
+        alert("✅ Barang baru berhasil ditambahkan dan langsung aktif di semua HP!");
+      } catch (err) {
+        console.error("Firebase Error:", err);
+        alert("Gagal menyimpan barang baru ke cloud: " + err.message);
+      }
+    });
+
+    renderItems();
+  </script>
+</body>
+</html>
