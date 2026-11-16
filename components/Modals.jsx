@@ -169,7 +169,7 @@ function StrukModal({ data, onClose, onNotify }) {
   };
 
   return (
-    <div className="absolute inset-0 z-[70] flex items-center justify-center p-3" role="dialog" aria-modal="true">
+    <div className="absolute inset-0 z-[70] flex items-center justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-[calc(0.75rem+env(safe-area-inset-top,0px))]" role="dialog" aria-modal="true">
       <div onClick={onClose} className="absolute inset-0 bg-ink-950/85 backdrop-blur-md" />
 
       <div className="relative z-10 flex max-h-full w-full max-w-[380px] flex-col items-center gap-3 overflow-y-auto py-1">
@@ -262,7 +262,7 @@ function PinModal({ pin, onClose, onSuccess }) {
   };
 
   return (
-    <div className="absolute inset-0 z-[70] flex items-center justify-center p-5" role="dialog" aria-modal="true">
+    <div className="absolute inset-0 z-[70] flex items-center justify-center px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-[calc(1.25rem+env(safe-area-inset-top,0px))]" role="dialog" aria-modal="true">
       <div onClick={onClose} className="absolute inset-0 bg-ink-950/80 backdrop-blur-md" />
 
       <div ref={cardRef} className="card relative z-10 w-full max-w-[300px] space-y-4 p-5 text-center shadow-2xl">
@@ -308,7 +308,7 @@ function PinModal({ pin, onClose, onSuccess }) {
 function ConfirmDialog({ open, title, desc, confirmLabel, onCancel, onConfirm }) {
   if (!open) return null;
   return (
-    <div className="absolute inset-0 z-[70] flex items-center justify-center p-5" role="dialog" aria-modal="true">
+    <div className="absolute inset-0 z-[70] flex items-center justify-center px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-[calc(1.25rem+env(safe-area-inset-top,0px))]" role="dialog" aria-modal="true">
       <div onClick={onCancel} className="absolute inset-0 bg-ink-950/80 backdrop-blur-md" />
       <div className="card relative z-10 w-full max-w-[290px] space-y-3.5 p-5 text-center shadow-2xl">
         <h3 className="font-display text-sm font-bold text-stone-100">{title}</h3>

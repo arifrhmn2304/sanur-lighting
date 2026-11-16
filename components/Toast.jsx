@@ -54,7 +54,7 @@ function ToastItem({ toast }) {
 
 export default function ToastStack({ toasts }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-3 z-[80] flex flex-col items-center gap-2 px-4">
+    <div className="pointer-events-none absolute inset-x-0 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[80] flex flex-col items-center gap-2 px-4">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}

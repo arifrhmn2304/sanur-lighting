@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function Header() {
   return (
-    <header className="relative z-20 flex flex-shrink-0 items-center justify-between border-b border-white/[0.06] bg-ink-950/60 px-4 py-3 backdrop-blur-md lg:px-6 lg:py-4">
+    <header className="relative z-20 flex flex-shrink-0 items-center justify-between border-b border-white/[0.06] bg-ink-950/60 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] backdrop-blur-md lg:px-6 lg:pb-4 lg:pt-[calc(1rem+env(safe-area-inset-top,0px))]">
       <div className="flex items-center gap-2.5">
         <div className="relative">
           <Image
